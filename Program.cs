@@ -43,6 +43,7 @@ namespace MelodyDesk
             };
             using (var styles = Assembly.GetExecutingAssembly().GetManifestResourceStream("Styles.xaml"))
                 app.Resources = (ResourceDictionary)XamlReader.Load(styles);
+            Theme.Apply(app.Resources, Theme.Resolve(Theme.Chosen));
 
             var main = new MainWindow(!args.Contains("--tray"));
             new Thread(() => { while (showRequest.WaitOne()) main.Ui(main.ShowMain); }) { IsBackground = true, Name = "show-request" }.Start();

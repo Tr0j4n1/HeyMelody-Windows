@@ -88,6 +88,15 @@ namespace MelodyDesk
             memory.OnReport(0);
             Check("noise: later change on the buds is adopted", memory.Chosen == 0 && sent.Count == 2);
 
+            // Text stays readable (WCAG AA, 4.5:1) on cards and page backgrounds in both themes.
+            foreach (bool dark in new[] { false, true })
+                foreach (string surface in new[] { "CardBg", "ContentBg", "WindowBg" })
+                {
+                    var bg = Theme.ColorOf(surface, dark);
+                    double worst = new[] { "LabelPrimary", "LabelSecondary", "AccentText" }.Min(text => Theme.Contrast(Theme.ColorOf(text, dark), bg));
+                    Check("contrast " + (dark ? "dark " : "light ") + surface + " " + worst.ToString("0.0") + ":1", worst >= 4.5);
+                }
+
             Console.WriteLine(failures == 0 ? "selftest: all passed" : "selftest: " + failures + " failed");
             return failures == 0 ? 0 : 1;
         }

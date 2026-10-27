@@ -16,6 +16,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 using Path = System.Windows.Shapes.Path;
 
@@ -92,7 +93,7 @@ namespace MelodyDesk
         readonly TextBlock navFooter;
         readonly FrameworkElement subPage;
         readonly FrameworkElement[] tabPages;
-        readonly Brush accent, labelPrimary, labelSecondary, labelTertiary, divider;
+        Brush accent, accentText, labelPrimary, labelSecondary, labelTertiary, divider; // re-read on a theme switch
         readonly BitmapSource earbudsImage, appIcon;
 
         readonly Window flyout;
@@ -159,11 +160,9 @@ namespace MelodyDesk
             aboutContent = (StackPanel)window.FindName("AboutContent");
             subPage = (FrameworkElement)window.FindName("SubPage");
             tabPages = new[] { (FrameworkElement)window.FindName("MainPage"), (FrameworkElement)window.FindName("ControlsPage"), (FrameworkElement)window.FindName("AboutPage") };
-            accent = (Brush)window.FindResource("Accent");
-            labelPrimary = (Brush)window.FindResource("LabelPrimary");
-            labelSecondary = (Brush)window.FindResource("LabelSecondary");
-            labelTertiary = (Brush)window.FindResource("LabelTertiary");
-            divider = (Brush)window.FindResource("Divider");
+            LoadBrushes();
+            window.SourceInitialized += (s, e) => Theme.ApplyTitleBar(window);
+            SystemEvents.UserPreferenceChanged += OnPreferenceChanged;
 
             using (var png = Assembly.GetExecutingAssembly().GetManifestResourceStream("earbuds.png"))
                 earbudsImage = BitmapFrame.Create(png, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
@@ -206,6 +205,7 @@ namespace MelodyDesk
             };
             tray.Clicked += ToggleFlyout;
             tray.MenuOpening += BuildTrayMenu;
+            tray.SetDark(Theme.IsDark);
 
             LoadDevices();
             Render();
@@ -231,8 +231,39 @@ namespace MelodyDesk
         {
             exiting = true;
             link.Close("Exiting");
+            SystemEvents.UserPreferenceChanged -= OnPreferenceChanged;
             tray.Dispose();
             Application.Current.Shutdown();
+        }
+
+        void LoadBrushes()
+        {
+            accent = (Brush)window.FindResource("Accent");
+            accentText = (Brush)window.FindResource("AccentText");
+            labelPrimary = (Brush)window.FindResource("LabelPrimary");
+            labelSecondary = (Brush)window.FindResource("LabelSecondary");
+            labelTertiary = (Brush)window.FindResource("LabelTertiary");
+            divider = (Brush)window.FindResource("Divider");
+        }
+
+        // Swaps the palette; XAML follows through DynamicResource, and code-built rows are rebuilt with the new brushes.
+        void ApplyTheme()
+        {
+            Theme.Apply(Application.Current.Resources, Theme.Resolve(Theme.Chosen));
+            LoadBrushes();
+            cardLayout = subLayout = controlsLayout = null;
+            BuildAbout();
+            Theme.ApplyTitleBar(window);
+            if (logBox != null) Theme.ApplyTitleBar(Window.GetWindow(logBox));
+            tray.SetDark(Theme.IsDark);
+            Render();
+        }
+
+        // Follows Windows' app mode while the theme is set to "Use system setting".
+        void OnPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category != UserPreferenceCategory.General) return;
+            Ui(() => { if (Theme.Chosen == Theme.Mode.System && Theme.SystemIsDark() != Theme.IsDark) ApplyTheme(); });
         }
 
         ModelProfile Profile
@@ -681,7 +712,7 @@ namespace MelodyDesk
             if (caps.Contains(Cmd.SetEqMode))
             {
                 eqSummary = Summary(null);
-                eqSummary.Foreground = accent;
+                eqSummary.Foreground = accentText;
                 AddSection(cards, "Audio effects", Card(new[] { Row("Sound Master EQ", eqSummary, Chevron(), OpenEqualizer) }));
             }
             if (Visible(FeatureGameMode))
@@ -754,7 +785,7 @@ namespace MelodyDesk
         {
             var body = new Grid { Width = 40, Height = 20 };
             var fill = new Border { CornerRadius = new CornerRadius(2), Margin = new Thickness(2), HorizontalAlignment = HorizontalAlignment.Left,
-                Width = Math.Max(0, 36 * Math.Min(100, b.Level) / 100.0), Background = b.Charging ? new SolidColorBrush(Color.FromArgb(0x66, 0x00, 0xBD, 0x13)) : (Brush)new SolidColorBrush(Color.FromArgb(0x33, 0, 0, 0)) };
+                Width = Math.Max(0, 36 * Math.Min(100, b.Level) / 100.0), Background = b.Charging ? new SolidColorBrush(Color.FromArgb(0x66, 0x00, 0xBD, 0x13)) : (Brush)window.FindResource("BatteryFill") };
             body.Children.Add(fill);
             body.Children.Add(new Border { CornerRadius = new CornerRadius(4), BorderBrush = labelSecondary, BorderThickness = new Thickness(1.2) });
             body.Children.Add(new TextBlock { Text = b.Level.ToString(), FontSize = 12, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
@@ -764,7 +795,7 @@ namespace MelodyDesk
             if (b.Charging) battery.Children.Add(Glyph(Icons.Charging, 7, 12, new SolidColorBrush(Color.FromRgb(0x00, 0xBD, 0x13)), new Thickness(4, 0, 0, 0)));
 
             var badge = new Grid { Width = 18, Height = 18, Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Center };
-            badge.Children.Add(new Ellipse { Fill = new SolidColorBrush(Color.FromRgb(0x6E, 0x6E, 0x6E)) });
+            badge.Children.Add(new Ellipse { Fill = (Brush)window.FindResource("Badge") });
             if (id == 3) badge.Children.Add(Glyph(Icons.Case, 10, 9, Brushes.White, new Thickness(0)));
             else badge.Children.Add(new TextBlock { Text = id == 1 ? "L" : "R", Foreground = Brushes.White, FontSize = 10, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
 
@@ -948,7 +979,10 @@ namespace MelodyDesk
                 int index = i;
                 FrameworkElement icon;
                 if (items[i].Item2 == null)
-                    icon = new Path { Data = Geometry.Parse(Tray.Glyph), Width = 16, Height = 16, Stretch = Stretch.Uniform, Fill = labelPrimary };
+                {
+                    icon = new Path { Data = Geometry.Parse(Tray.Glyph), Width = 16, Height = 16, Stretch = Stretch.Uniform };
+                    icon.SetResourceReference(Shape.FillProperty, "LabelPrimary");
+                }
                 else
                     icon = new TextBlock { Text = items[i].Item2, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 16 };
                 icon.VerticalAlignment = VerticalAlignment.Center;
@@ -1015,7 +1049,7 @@ namespace MelodyDesk
                 bool hold = action.Item1 == TouchAndHold;
                 string title = hold ? action.Item2 : action.Item2 + " " + sideName + " earbud";
                 var value = Summary(FunctionLabel(entry.Item2));
-                value.Foreground = accent;
+                value.Foreground = accentText;
                 var below = new StackPanel();
                 if (hold) below.Children.Add(new TextBlock { Text = "Touch and hold the stem of an earbud for 1 s to switch between noise control modes.", Style = (Style)window.FindResource("RowSummary") });
                 below.Children.Add(value);
@@ -1073,6 +1107,19 @@ namespace MelodyDesk
             name.Children.Add(new TextBlock { Text = "Earbuds control for Windows", Foreground = labelSecondary });
             header.Children.Add(name);
             aboutContent.Children.Add(new Border { Style = (Style)window.FindResource("Card"), Child = header, Margin = new Thickness(0, 16, 0, 0) });
+            var themes = new List<UIElement>();
+            foreach (var option in new[] { Tuple.Create(Theme.Mode.System, "Use system setting"), Tuple.Create(Theme.Mode.Light, "Light"), Tuple.Create(Theme.Mode.Dark, "Dark") })
+            {
+                var mode = option.Item1;
+                var mark = Mark();
+                SetMark(mark, Theme.Chosen == mode);
+                themes.Add(Row(option.Item2, mode == Theme.Mode.System ? Summary("Match Windows' light or dark app mode") : null, mark, () =>
+                {
+                    Theme.Chosen = mode;
+                    ApplyTheme();
+                }));
+            }
+            AddSection(aboutContent, "Appearance", Card(themes));
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             AddSection(aboutContent, "About MelodyDesk", Card(new[] {
                 Row("App version", null, new TextBlock { Text = version.Major + "." + version.Minor, Foreground = labelSecondary }, null),
@@ -1202,7 +1249,7 @@ namespace MelodyDesk
             OpenSubPage("Find my earbuds", () => device != null ? device.Name : "", () =>
             {
                 subContent.Children.Clear();
-                findGlyph = new Path { Width = 12, Height = 14, Stretch = Stretch.Uniform, Fill = accent };
+                findGlyph = new Path { Width = 12, Height = 14, Stretch = Stretch.Uniform, Fill = accentText };
                 var leading = Glyph(Tray.Glyph, 20, 20, labelPrimary, new Thickness(0));
                 AddSection(subContent, "Bluetooth earbuds", Card(new[] { Row(device != null ? device.Name : "Earbuds", null, findGlyph, ToggleFind, leading) }));
             });
@@ -1242,15 +1289,17 @@ namespace MelodyDesk
             stack.Children.Add(open);
             var card = new Border
             {
-                Background = Brushes.White, CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 14, 16, 14), Width = 344,
+                CornerRadius = new CornerRadius(12), Padding = new Thickness(16, 14, 16, 14), Width = 344,
                 Margin = new Thickness(12), Child = stack, Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 2, Opacity = 0.25 },
             };
             var w = new Window
             {
                 WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, ShowInTaskbar = false,
                 Topmost = true, ResizeMode = ResizeMode.NoResize, SizeToContent = SizeToContent.WidthAndHeight, UseLayoutRounding = true,
-                FontFamily = window.FontFamily, FontSize = 14, Foreground = labelPrimary, Content = card, Title = "MelodyDesk",
+                FontFamily = window.FontFamily, FontSize = 14, Content = card, Title = "MelodyDesk",
             };
+            card.SetResourceReference(Border.BackgroundProperty, "CardBg");
+            w.SetResourceReference(Control.ForegroundProperty, "LabelPrimary");
             w.Deactivated += (s, e) => { w.Hide(); flyoutHiddenAt = DateTime.UtcNow; };
             return w;
         }
@@ -1321,7 +1370,10 @@ namespace MelodyDesk
         {
             if (logBox != null) { Window.GetWindow(logBox).Activate(); return; }
             logBox = new TextBox { IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Text = log.ToString(), BorderThickness = new Thickness(0), Padding = new Thickness(8) };
-            var w = new Window { Title = "Traffic log — MelodyDesk", Width = 640, Height = 420, Content = logBox };
+            logBox.SetResourceReference(Control.BackgroundProperty, "CardBg");
+            logBox.SetResourceReference(Control.ForegroundProperty, "LabelPrimary");
+            var w = new Window { Title = "Traffic log — MelodyDesk", Width = 640, Height = 420, Content = logBox, Icon = appIcon };
+            w.SourceInitialized += (s, e) => Theme.ApplyTitleBar(w);
             w.Closed += (s, e) => logBox = null;
             w.Show();
             logBox.ScrollToEnd();

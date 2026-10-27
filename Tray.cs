@@ -44,6 +44,53 @@ namespace MelodyDesk
             icon.Text = text.Length > 63 ? text.Substring(0, 63) : text; // NotifyIcon.Text throws above 63 chars
         }
 
+        // WinForms menus don't follow the Windows theme, so dark mode swaps in a dark renderer.
+        public void SetDark(bool dark)
+        {
+            menu.Renderer = dark ? new DarkRenderer() : new ToolStripProfessionalRenderer();
+            menu.BackColor = dark ? DarkColors.Background : SystemColors.Menu;
+            menu.ForeColor = dark ? Color.FromArgb(0xE6, 0xE6, 0xE6) : SystemColors.MenuText;
+        }
+
+        sealed class DarkColors : ProfessionalColorTable
+        {
+            public static readonly Color Background = Color.FromArgb(0x2B, 0x2B, 0x2B);
+            static readonly Color Highlight = Color.FromArgb(0x3D, 0x3D, 0x3D);
+            static readonly Color Line = Color.FromArgb(0x45, 0x45, 0x45);
+            public override Color ToolStripDropDownBackground { get { return Background; } }
+            public override Color ImageMarginGradientBegin { get { return Background; } }
+            public override Color ImageMarginGradientMiddle { get { return Background; } }
+            public override Color ImageMarginGradientEnd { get { return Background; } }
+            public override Color MenuBorder { get { return Line; } }
+            public override Color MenuItemBorder { get { return Highlight; } }
+            public override Color MenuItemSelected { get { return Highlight; } }
+            public override Color SeparatorDark { get { return Line; } }
+            public override Color SeparatorLight { get { return Background; } }
+            public override Color CheckBackground { get { return Background; } }
+            public override Color CheckSelectedBackground { get { return Highlight; } }
+            public override Color CheckPressedBackground { get { return Highlight; } }
+        }
+
+        sealed class DarkRenderer : ToolStripProfessionalRenderer
+        {
+            public DarkRenderer() : base(new DarkColors()) { RoundedEdges = false; }
+
+            // The stock check mark is a black bitmap; draw a light one instead.
+            protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+            {
+                var r = e.ImageRectangle;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var pen = new Pen(Color.FromArgb(0xE6, 0xE6, 0xE6), 1.6f))
+                    e.Graphics.DrawLines(pen, new[] { new PointF(r.Left + r.Width * 0.22f, r.Top + r.Height * 0.52f), new PointF(r.Left + r.Width * 0.42f, r.Top + r.Height * 0.72f), new PointF(r.Left + r.Width * 0.78f, r.Top + r.Height * 0.3f) });
+            }
+
+            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+            {
+                e.TextColor = e.Item.Enabled ? Color.FromArgb(0xE6, 0xE6, 0xE6) : Color.FromArgb(0x8A, 0x8A, 0x8A);
+                base.OnRenderItemText(e);
+            }
+        }
+
         public void Balloon(string title, string text)
         {
             icon.ShowBalloonTip(5000, title, text, ToolTipIcon.None);

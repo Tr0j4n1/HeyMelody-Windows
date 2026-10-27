@@ -32,7 +32,11 @@ Pages opened from the Device page show a breadcrumb (for example **Device › So
 - Click a gesture to change its function: Play/Pause, Previous, Next, Game mode or None. Touch and hold offers Noise cancellation / Transparency or None.
 - "When on a call" shows the fixed call controls.
 
-**About**: app version and what the app is built from.
+**About**: app version and what the app is built from, plus **Appearance**:
+- **Use system setting** (default) follows Windows' app mode (Settings → Personalisation → Colours) and switches live when you change it.
+- **Light** or **Dark** fixes the theme. The choice is saved in `%APPDATA%\MelodyDesk\theme.txt`.
+
+Dark mode covers the window and its title bar, the menus, the tray panel and the tray menu. The dark palette uses HeyMelody's own night colours; the window surfaces follow Windows 11. `--selftest` checks that text in both themes stays at WCAG AA contrast (4.5:1).
 
 **What's shown for each model**
 

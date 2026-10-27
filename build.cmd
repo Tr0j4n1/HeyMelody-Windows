@@ -7,5 +7,5 @@ set FW=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319
   -r:System.Windows.Forms.dll -r:System.Drawing.dll ^
   -resource:Styles.xaml,Styles.xaml -resource:MainWindow.xaml,MainWindow.xaml ^
   -resource:Assets\earbuds.png,earbuds.png -resource:Assets\app.png,app.png -resource:Assets\app.ico,app.ico ^
-  Protocol.cs Bluetooth.cs Icons.cs Tray.cs NoiseMemory.cs MainWindow.cs Program.cs SelfTest.cs || exit /b 1
+  Protocol.cs Bluetooth.cs Icons.cs Theme.cs Tray.cs NoiseMemory.cs MainWindow.cs Program.cs SelfTest.cs || exit /b 1
 "%~dp0MelodyDesk.exe" --selftest | more
