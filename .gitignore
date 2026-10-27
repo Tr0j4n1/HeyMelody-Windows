@@ -1,0 +1,7 @@
+# Build output (build.cmd recreates it)
+MelodyDesk.exe
+*.pdb
+*.obj
+
+# Never commit the source APK
+*.apk
