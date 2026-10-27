@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Markup;
 
 [assembly: AssemblyTitle("MelodyDesk")]
-[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
 
 namespace MelodyDesk
 {
