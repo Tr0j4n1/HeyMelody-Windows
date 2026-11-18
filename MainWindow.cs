@@ -104,6 +104,7 @@ namespace MelodyDesk
 
         readonly Tray tray = new Tray();
         readonly TaskbarLabel taskbarLabel = new TaskbarLabel();
+        readonly TapFix tapFix = new TapFix();
         readonly EarbudsLink link = new EarbudsLink();
         readonly NoiseMemory noise;
         readonly DispatcherTimer batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -208,6 +209,8 @@ namespace MelodyDesk
             tray.MenuOpening += BuildTrayMenu;
             tray.SetDark(Theme.IsDark);
             taskbarLabel.Clicked += () => Ui(ToggleFlyout);
+            tapFix.Log += line => Ui(() => Log(line));
+            tapFix.Start();
 
             LoadDevices();
             Render();
@@ -547,6 +550,10 @@ namespace MelodyDesk
                     break;
                 case 6:
                     knownDevices = Parse.KnownDevices(d, 1);
+                    break;
+                case 0xF1:
+                    // A gesture was used: F1, device, button, action, function; for Play/Pause (1) the next byte is what the buds sent (2 pause, 3 play).
+                    if (d.Length >= 6 && d[4] == 1) tapFix.OnTap(d[5] == 3);
                     break;
             }
         }
@@ -1100,6 +1107,70 @@ namespace MelodyDesk
             menu.IsOpen = true;
         }
 
+        // The About page's Updates row, rebuilt from these as a check or download progresses.
+        string updateStatus;
+        Version updateFound;
+        bool updateBusy;
+
+        void CheckForUpdates()
+        {
+            updateBusy = true;
+            updateStatus = "Checking…";
+            BuildAbout();
+            new Thread(() =>
+            {
+                Version found = null;
+                string status, error = null;
+                try
+                {
+                    var latest = Update.Latest();
+                    if (Update.IsNewer(latest)) found = latest;
+                    status = found != null ? "MelodyDesk " + latest + " is available" : "You have the latest version";
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
+                    status = "Couldn't reach GitHub. Check your internet connection and try again.";
+                }
+                Ui(() =>
+                {
+                    if (error != null) Log("Update check failed: " + error);
+                    updateBusy = false;
+                    updateFound = found;
+                    updateStatus = status;
+                    BuildAbout();
+                });
+            }) { IsBackground = true }.Start();
+        }
+
+        void InstallUpdate()
+        {
+            updateBusy = true;
+            updateStatus = "Downloading MelodyDesk " + updateFound + "…";
+            BuildAbout();
+            new Thread(() =>
+            {
+                string status, error = null;
+                try
+                {
+                    Update.Install();
+                    status = "Click Update in the setup window to finish. MelodyDesk restarts on its own.";
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
+                    status = "Couldn't download the update. Try again.";
+                }
+                Ui(() =>
+                {
+                    if (error != null) Log("Update download failed: " + error);
+                    updateBusy = false;
+                    updateStatus = status;
+                    BuildAbout();
+                });
+            }) { IsBackground = true }.Start();
+        }
+
         void BuildAbout()
         {
             aboutContent.Children.Clear();
@@ -1124,9 +1195,12 @@ namespace MelodyDesk
                 }));
             }
             AddSection(aboutContent, "Appearance", Card(themes));
-            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            var updateButton = new Button { Content = updateFound != null ? "Download and install" : "Check for updates",
+                Style = (Style)window.FindResource(updateFound != null ? "AccentButton" : "PlainButton"), IsEnabled = !updateBusy };
+            updateButton.Click += (s, e) => { if (updateFound != null) InstallUpdate(); else CheckForUpdates(); };
             AddSection(aboutContent, "About MelodyDesk", Card(new[] {
-                Row("App version", null, new TextBlock { Text = version.Major + "." + version.Minor, Foreground = labelSecondary }, null),
+                Row("App version", null, new TextBlock { Text = Update.Current.ToString(2), Foreground = labelSecondary }, null),
+                Row("Updates", Summary(updateStatus), updateButton, null),
                 Row("Protocol", Summary("Reverse-engineered from HeyMelody 116.9.0 for Android"), null, null),
                 Row("Supported devices", Summary("OPPO, OnePlus and realme earbuds that use the HeyMelody app"), null, null),
             }));

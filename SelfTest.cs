@@ -48,6 +48,9 @@ namespace MelodyDesk
             Check("versions", Parse.Versions(version) == "Left 111.155.155   Right 111.155.155   Case 111.101.101");
             Check("firmware summary", Parse.FirmwareSummary(version) == "155.155.101"); // what the phone shows
 
+            var tag = Update.FromTagUrl("https://github.com/Tr0j4n1/HeyMelody-Windows/releases/tag/v1.4");
+            Check("release tag", tag == new Version(1, 4) && Update.IsNewer(new Version(Update.Current.Major, Update.Current.Minor + 1)) && !Update.IsNewer(new Version(Update.Current.Major, Update.Current.Minor)));
+
             // 0x8122 from the buds; Custom1's body is exactly what 0x0418 [02 ...] accepted to select it.
             var customs = Parse.CustomEqs(Bytes("0002" +
                 "00FA060707437573746F6D31063E0000FA0000E80300A00F00401F00803E00" +

@@ -49,6 +49,11 @@ Pages opened from the Device page show a breadcrumb (for example **Device › So
 
 Dark mode covers the window and its title bar, the menus, the tray panel and the tray menu. The dark palette uses HeyMelody's own night colours; the window surfaces follow Windows 11. `--selftest` checks that text in both themes stays at WCAG AA contrast (4.5:1).
 
+**Updates** (also on the About page):
+- **Check for updates** asks GitHub for the newest release of this repository. MelodyDesk only checks when you click it.
+- If that release is newer than the running copy, **Download and install** downloads its `MelodyDesk-Setup.exe` to your temp folder and opens it.
+- Click **Update** in Setup. It closes MelodyDesk, replaces it and starts the new version.
+
 **What's shown for each model**
 
 What appears for the **Nord Buds 3 Pro** is copied from the phone app. That covers which rows appear, the three noise buttons, and the EQ preset names; the preset numbers (3, 4 and 5) were read from the buds while each was picked on the phone. The buds also answer for Vocal enhancement, Hi-Res, Spatial Audio, Camera control and Game EQ. The phone hides those for this model, so MelodyDesk does too.
@@ -72,6 +77,7 @@ MelodyDesk keeps running in the notification area. On Windows 11 new icons start
   - **Battery on taskbar** (on by default)
   - **Exit**
 - **Battery on taskbar**: while the buds are connected, the taskbar shows their levels (for example `L 80%  R 100%`, with `+` while charging) just left of the notification area. It shades on hover like the taskbar's own buttons, and clicking it opens the same panel as the tray icon. It's a child window of the taskbar, so it hides with the taskbar for full-screen apps and auto-hide. `app.manifest` declares Windows 10/11 support, which Windows requires before it allows a transparent child window like this one.
+- **Play/pause taps that go the wrong way**: the buds decide between play and pause by whether the PC is sending them sound. If another app plays short sounds while your music is paused, a tap meant to resume sends "pause", which does nothing. The buds tell MelodyDesk about every tap, so when a tap sends pause to a paused player while the PC was sending sound, MelodyDesk resumes the player itself, about 0.8 s later. It waits that long because the buds' own pause reaches the player about 0.5 s after their report. Without sound from the PC it leaves the player alone, since the tap was then for the other device the buds are connected to.
 - **Closing the window** only hides it. Use **Exit** to quit.
 - **Running `MelodyDesk.exe` again** brings the existing window back instead of starting a second copy.
 - **Auto-reconnect**: the buds drop the link when they go into a closed case. MelodyDesk reconnects within about 15 seconds of Windows seeing them again, unless you chose Disconnect.
@@ -130,7 +136,7 @@ cmd (LE16) | seq (u8) | len (LE16) | payload
 | `0122` | get | – | custom EQs: `[n, (selected, min, max, id, nameLen, name, bands, (freq LE16, dB)…)…]` |
 | `0124` | get | – | BassWave level: `[min, max, value]`, signed (−10…10) |
 | `0200` / `0205` | get / set | `[n, events…]` | event capability, then register for those events |
-| `0204` | push | `[type, …]` | events: 1 battery, 2 ear status, 3 noise mode, 5 game mode, 6 remembered devices, F1 gesture used |
+| `0204` | push | `[type, …]` | events: 1 battery, 2 ear status, 3 noise mode, 5 game mode, 6 remembered devices, F1 gesture used `[F1, device, button, action, function, …]`; for Play/Pause the next byte is what the buds sent (2 pause, 3 play) |
 | `0400` | set | `[1\|0]` | find earbuds: start/stop the sound |
 | `0401` | set | `[n, (device, button, action, function)…]` | gestures. Actions: 1 single tap, 2 double-tap, 3 triple-tap, 6 long touch and hold, 4 touch and hold. Functions: 0 None, 1 Play/Pause, 5 Previous, 6 Next, 8 noise control, 17 Game mode |
 | `0403` | set | `[id, 1\|0]` | feature switch |
