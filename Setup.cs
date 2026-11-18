@@ -179,8 +179,8 @@ namespace MelodyDesk
             string self = Path.GetFullPath(Assembly.GetExecutingAssembly().Location);
             if (!string.Equals(self, SetupExe, StringComparison.OrdinalIgnoreCase)) File.Copy(self, SetupExe, true);
 
-            Shortcut(StartMenuLink);
-            if (desktopShortcut) Shortcut(DesktopLink); else File.Delete(DesktopLink);
+            Startup.Shortcut(StartMenuLink, AppExe, "");
+            if (desktopShortcut) Startup.Shortcut(DesktopLink, AppExe, ""); else File.Delete(DesktopLink);
             Startup.Set(startup, AppExe);
             using (var key = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
@@ -227,16 +227,6 @@ namespace MelodyDesk
                     process.Kill();
                     process.WaitForExit(3000);
                 }
-        }
-
-        static void Shortcut(string path)
-        {
-            dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
-            var link = shell.CreateShortcut(path);
-            link.TargetPath = AppExe;
-            link.WorkingDirectory = Dir;
-            link.Description = "Earbuds control for Windows";
-            link.Save();
         }
     }
 }

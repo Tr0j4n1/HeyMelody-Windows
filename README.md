@@ -15,7 +15,9 @@ Tested against a **OnePlus Nord Buds 3 Pro** (firmware 111.155.155).
 
 `MelodyDesk-Setup.exe` installs for your user only, so it needs no administrator rights:
 - It copies MelodyDesk to `%LOCALAPPDATA%\Programs\MelodyDesk` and adds it to the Start menu.
-- **Start with Windows** (on by default) starts MelodyDesk in the notification area each time you sign in, so the buds connect without you opening it. It's the same setting as **Start with Windows** on the About page and in the tray menu. If you disable MelodyDesk in Task Manager's Startup apps, MelodyDesk shows it as off; turning it back on in MelodyDesk undoes that.
+- **Start with Windows** (on by default) starts MelodyDesk in the notification area each time you sign in, so the buds connect without you opening it. It's the same setting as **Start with Windows** on the About page and in the tray menu.
+  - It's a shortcut in your Startup folder, so MelodyDesk appears in Task Manager's Startup apps and in Settings → Apps → Startup. (1.6 and older used a Run registry entry, which some Windows builds leave out of those lists; installing a newer version moves it.)
+  - If you disable MelodyDesk in Task Manager, MelodyDesk shows it as off; turning it back on in MelodyDesk undoes that.
 - **Desktop shortcut** is optional.
 - If MelodyDesk is running, Setup closes it before replacing it, then opens the new copy.
 
@@ -80,7 +82,7 @@ MelodyDesk keeps running in the notification area. On Windows 11 new icons start
   - the noise modes
   - Open MelodyDesk
   - Connect / Disconnect
-  - **Start with Windows** (Setup turns it on; it adds `MelodyDesk.exe --tray` to your user's Run key)
+  - **Start with Windows** (Setup turns it on; it puts a `MelodyDesk.lnk` shortcut that runs `MelodyDesk.exe --tray` in your Startup folder)
   - **Battery on taskbar** (on by default)
   - **Exit**
 - **Battery on taskbar**: while the buds are connected, the taskbar shows their levels (for example `L 80%  R 100%`, with `+` while charging) just left of the notification area. It shades on hover like the taskbar's own buttons, and clicking it opens the same panel as the tray icon. It's a child window of the taskbar, so it hides with the taskbar for full-screen apps and auto-hide. `app.manifest` declares Windows 10/11 support, which Windows requires before it allows a transparent child window like this one.

@@ -17,7 +17,6 @@ type selftest.log
 del selftest.log
 if not "%SELFTEST%"=="0" exit /b 1
 "%FW%\csc.exe" -nologo -optimize -target:winexe -out:MelodyDesk-Setup.exe -win32icon:Assets\app.ico -win32manifest:app.manifest %REFS% ^
-  -r:Microsoft.CSharp.dll ^
   -resource:MelodyDesk.exe,MelodyDesk.exe -resource:Styles.xaml,Styles.xaml -resource:Assets\app.png,app.png ^
   Version.cs Theme.cs Startup.cs Setup.cs || exit /b 1
 echo built MelodyDesk.exe and MelodyDesk-Setup.exe
