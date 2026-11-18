@@ -96,6 +96,11 @@ namespace MelodyDesk
                     double worst = new[] { "LabelPrimary", "LabelSecondary", "AccentText" }.Min(text => Theme.Contrast(Theme.ColorOf(text, dark), bg));
                     Check("contrast " + (dark ? "dark " : "light ") + surface + " " + worst.ToString("0.0") + ":1", worst >= 4.5);
                 }
+            foreach (bool dark in new[] { false, true })
+            {
+                double onAccent = Theme.Contrast(Theme.ColorOf("OnAccent", dark), Theme.ColorOf("AccentText", dark));
+                Check("contrast " + (dark ? "dark" : "light") + " accent button " + onAccent.ToString("0.0") + ":1", onAccent >= 4.5);
+            }
 
             Console.WriteLine(failures == 0 ? "selftest: all passed" : "selftest: " + failures + " failed");
             return failures == 0 ? 0 : 1;

@@ -357,6 +357,49 @@
     </Setter>
   </Style>
 
+  <!-- Windows 11 dialog buttons (the setup window): filled accent for the main action, plain for the others. -->
+  <Style x:Key="AccentButton" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="MinWidth" Value="104"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Grid Height="32">
+            <Border CornerRadius="4" Background="{DynamicResource AccentText}"/>
+            <Border x:Name="Hov" CornerRadius="4" Background="#1FFFFFFF" Visibility="Collapsed"/>
+            <TextBlock Margin="20,0" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource OnAccent}"
+                       Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"/>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Hov" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="PlainButton" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="MinWidth" Value="104"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Grid Height="32">
+            <Border CornerRadius="4" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource Divider}" BorderThickness="1"/>
+            <Border x:Name="Hov" CornerRadius="4" Background="{DynamicResource Hover}" Visibility="Collapsed"/>
+            <TextBlock Margin="20,0" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource LabelPrimary}"
+                       Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"/>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Hov" Property="Visibility" Value="Visible"/></Trigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style x:Key="PillButton" TargetType="Button">
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="Focusable" Value="False"/>

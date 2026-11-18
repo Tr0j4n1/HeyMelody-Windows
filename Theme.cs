@@ -19,6 +19,7 @@ namespace MelodyDesk
         static readonly Dictionary<string, Tuple<string, string>> Palette = new Dictionary<string, Tuple<string, string>> {
             {"Accent",          Tuple.Create("#0A7FFB", "#0A7FFB")},   // fills: selected mode button, switch, slider
             {"AccentText",      Tuple.Create("#0067D0", "#5AA9FF")},   // accent as text: #0A7FFB is 3.9:1 on white, these clear 4.5:1 on every surface
+            {"OnAccent",        Tuple.Create("#FFFFFF", "#000000")},       // text on an AccentText fill (Setup's Install button), as Windows 11 does
             {"AccentSoft",      Tuple.Create("#260A7FFB", "#400A7FFB")},
             {"AccentSoftHover", Tuple.Create("#400A7FFB", "#590A7FFB")},
             {"LabelPrimary",    Tuple.Create("#E6000000", "#E6FFFFFF")},   // coui_color_label_primary
@@ -64,10 +65,15 @@ namespace MelodyDesk
         }
 
         // Windows "Choose your app mode" (Settings > Personalisation > Colours).
-        public static bool SystemIsDark()
+        public static bool SystemIsDark() { return PersonalizeIsDark("AppsUseLightTheme"); }
+
+        // The taskbar follows "Choose your default Windows mode", which can differ from the app mode.
+        public static bool TaskbarIsDark() { return PersonalizeIsDark("SystemUsesLightTheme"); }
+
+        static bool PersonalizeIsDark(string value)
         {
             using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
-                return key != null && Convert.ToInt32(key.GetValue("AppsUseLightTheme", 1)) == 0;
+                return key != null && Convert.ToInt32(key.GetValue(value, 1)) == 0;
         }
 
         public static bool Resolve(Mode mode)

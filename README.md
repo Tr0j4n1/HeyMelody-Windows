@@ -8,7 +8,18 @@ Tested against a **OnePlus Nord Buds 3 Pro** (firmware 111.155.155).
 ## Use
 
 1. Pair the earbuds with Windows (Settings → Bluetooth & devices).
-2. Run `MelodyDesk.exe` (or build it, see below) and click **Connect** next to the earbuds' name. After the first successful connection, the app connects on its own at start-up.
+2. Run `MelodyDesk-Setup.exe` and click **Install** (or run `MelodyDesk.exe` on its own without installing; see below to build either).
+3. Click **Connect** next to the earbuds' name. After the first successful connection, the app connects on its own at start-up.
+
+### Install
+
+`MelodyDesk-Setup.exe` installs for your user only, so it needs no administrator rights:
+- It copies MelodyDesk to `%LOCALAPPDATA%\Programs\MelodyDesk` and adds it to the Start menu.
+- **Start with Windows** (on by default) starts MelodyDesk in the notification area each time you sign in, so the buds connect without you opening it. It's the same setting as **Start with Windows** in the tray menu.
+- **Desktop shortcut** is optional.
+- If MelodyDesk is running, Setup closes it before replacing it, then opens the new copy.
+
+Running Setup again offers **Reinstall** or **Update**, and **Uninstall**. You can also uninstall from Settings → Apps → Installed apps → MelodyDesk. Uninstalling removes the program, its shortcuts and the startup entry. Your settings in `%APPDATA%\MelodyDesk` are kept.
 
 The window is laid out like Windows 11 Settings: a navigation pane on the left (Device, Earbud controls, About) and the page on the right. The controls themselves keep the HeyMelody phone app's look.
 
@@ -57,8 +68,10 @@ MelodyDesk keeps running in the notification area. On Windows 11 new icons start
   - the noise modes
   - Open MelodyDesk
   - Connect / Disconnect
-  - **Start with Windows** (off by default; it adds `MelodyDesk.exe --tray` to your user's Run key)
+  - **Start with Windows** (Setup turns it on; it adds `MelodyDesk.exe --tray` to your user's Run key)
+  - **Battery on taskbar** (on by default)
   - **Exit**
+- **Battery on taskbar**: while the buds are connected, the taskbar shows their levels (for example `L 80%  R 100%`, with `+` while charging) just left of the notification area. It shades on hover like the taskbar's own buttons, and clicking it opens the same panel as the tray icon. It's a child window of the taskbar, so it hides with the taskbar for full-screen apps and auto-hide. `app.manifest` declares Windows 10/11 support, which Windows requires before it allows a transparent child window like this one.
 - **Closing the window** only hides it. Use **Exit** to quit.
 - **Running `MelodyDesk.exe` again** brings the existing window back instead of starting a second copy.
 - **Auto-reconnect**: the buds drop the link when they go into a closed case. MelodyDesk reconnects within about 15 seconds of Windows seeing them again, unless you chose Disconnect.
@@ -79,6 +92,7 @@ Your mode is remembered for as long as MelodyDesk is running. It is not saved be
 Run `build.cmd`. It compiles with the C# compiler and WPF that ship with Windows (.NET Framework 4.x). No SDK or NuGet packages are needed.
 - The layout lives in `MainWindow.xaml` and the shared styles in `Styles.xaml`. Both are embedded in the exe and loaded at runtime, along with the images in `Assets`. `Assets/app.ico` is also the exe's icon.
 - After building, the script runs `MelodyDesk.exe --selftest`. It checks the frame codec against bytes captured from real earbuds, and replays the captured case sequence through the noise-mode memory.
+- If the self-test passes, the script builds `MelodyDesk-Setup.exe` from `Setup.cs`, with `MelodyDesk.exe` embedded in it. `Version.cs` holds the version for both.
 
 If the UI hits an unexpected error, the app keeps running and writes the details to `%APPDATA%\MelodyDesk\error.log`.
 

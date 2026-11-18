@@ -7,7 +7,6 @@ using System.Windows;
 using System.Windows.Markup;
 
 [assembly: AssemblyTitle("MelodyDesk")]
-[assembly: AssemblyVersion("1.3.0.0")]
 
 namespace MelodyDesk
 {
@@ -30,6 +29,8 @@ namespace MelodyDesk
                 showRequest.Set();
                 return 0;
             }
+            // Setup sets this to close a running copy before it replaces the exe.
+            var exitRequest = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\MelodyDesk.Exit");
 
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             // Keep running on a UI bug and leave a trace of it next to the settings file.
@@ -47,6 +48,7 @@ namespace MelodyDesk
 
             var main = new MainWindow(!args.Contains("--tray"));
             new Thread(() => { while (showRequest.WaitOne()) main.Ui(main.ShowMain); }) { IsBackground = true, Name = "show-request" }.Start();
+            new Thread(() => { while (exitRequest.WaitOne()) main.Ui(main.Exit); }) { IsBackground = true, Name = "exit-request" }.Start();
             int code = app.Run();
             GC.KeepAlive(instance);
             return code;

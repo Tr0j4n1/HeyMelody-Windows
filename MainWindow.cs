@@ -103,6 +103,7 @@ namespace MelodyDesk
         DateTime flyoutHiddenAt;
 
         readonly Tray tray = new Tray();
+        readonly TaskbarLabel taskbarLabel = new TaskbarLabel();
         readonly EarbudsLink link = new EarbudsLink();
         readonly NoiseMemory noise;
         readonly DispatcherTimer batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -206,6 +207,7 @@ namespace MelodyDesk
             tray.Clicked += ToggleFlyout;
             tray.MenuOpening += BuildTrayMenu;
             tray.SetDark(Theme.IsDark);
+            taskbarLabel.Clicked += () => Ui(ToggleFlyout);
 
             LoadDevices();
             Render();
@@ -227,12 +229,13 @@ namespace MelodyDesk
             window.Activate();
         }
 
-        void Exit()
+        public void Exit()
         {
             exiting = true;
             link.Close("Exiting");
             SystemEvents.UserPreferenceChanged -= OnPreferenceChanged;
             tray.Dispose();
+            taskbarLabel.Close();
             Application.Current.Shutdown();
         }
 
@@ -616,6 +619,7 @@ namespace MelodyDesk
             cards.IsEnabled = flyoutNoise.IsEnabled = connected;
             cards.Opacity = flyoutNoise.Opacity = connected ? 1 : 0.45;
             tray.SetText(name + "\n" + (connected ? BatteryText() : connecting ? "Connecting…" : "Not connected"));
+            taskbarLabel.SetText(TaskbarLabel.Enabled && connected && batteries.Count > 0 ? BatteryText() : null);
 
             string layout = CardLayout();
             if (layout != cardLayout)
@@ -1305,8 +1309,7 @@ namespace MelodyDesk
         }
 
         void ToggleFlyout()
-        {
-            if (flyout.IsVisible) { flyout.Hide(); return; }
+        {            if (flyout.IsVisible) { flyout.Hide(); return; }
             if ((DateTime.UtcNow - flyoutHiddenAt).TotalMilliseconds < 400) return; // this click is what just closed it
             Render();
             flyout.Left = -10000; // measure off-screen first, then park it in the work-area corner next to the tray
@@ -1350,6 +1353,9 @@ namespace MelodyDesk
                 catch (Exception ex) { MessageBox.Show("Could not change the start-up setting.\n" + ex.Message, "MelodyDesk"); }
             };
             menu.Items.Add(autostart);
+            var onTaskbar = new Forms.ToolStripMenuItem("Battery on taskbar") { Checked = TaskbarLabel.Enabled };
+            onTaskbar.Click += (s, e) => { TaskbarLabel.Enabled = !TaskbarLabel.Enabled; Render(); };
+            menu.Items.Add(onTaskbar);
             menu.Items.Add(new Forms.ToolStripSeparator());
             var exit = new Forms.ToolStripMenuItem("Exit");
             exit.Click += (s, e) => Exit();

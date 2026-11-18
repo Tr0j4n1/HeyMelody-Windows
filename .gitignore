@@ -1,5 +1,7 @@
 # Build output (build.cmd recreates it)
 MelodyDesk.exe
+MelodyDesk-Setup.exe
+selftest.log
 *.pdb
 *.obj
 
