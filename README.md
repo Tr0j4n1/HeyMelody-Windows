@@ -15,7 +15,7 @@ Tested against a **OnePlus Nord Buds 3 Pro** (firmware 111.155.155).
 
 `MelodyDesk-Setup.exe` installs for your user only, so it needs no administrator rights:
 - It copies MelodyDesk to `%LOCALAPPDATA%\Programs\MelodyDesk` and adds it to the Start menu.
-- **Start with Windows** (on by default) starts MelodyDesk in the notification area each time you sign in, so the buds connect without you opening it. It's the same setting as **Start with Windows** in the tray menu.
+- **Start with Windows** (on by default) starts MelodyDesk in the notification area each time you sign in, so the buds connect without you opening it. It's the same setting as **Start with Windows** on the About page and in the tray menu. If you disable MelodyDesk in Task Manager's Startup apps, MelodyDesk shows it as off; turning it back on in MelodyDesk undoes that.
 - **Desktop shortcut** is optional.
 - If MelodyDesk is running, Setup closes it before replacing it, then opens the new copy.
 
@@ -43,15 +43,22 @@ Pages opened from the Device page show a breadcrumb (for example **Device › So
 - Click a gesture to change its function: Play/Pause, Previous, Next, Game mode or None. Touch and hold offers Noise cancellation / Transparency or None.
 - "When on a call" shows the fixed call controls.
 
-**About**: app version and what the app is built from, plus **Appearance**:
+**About**: app version and what the app is built from, plus these settings.
+
+**General**
+- **Start with Windows**: see Install above.
+- **Battery on taskbar**: shows or hides the battery levels on the taskbar (also in the tray menu). The choice is saved in `%APPDATA%\MelodyDesk\taskbar.txt`.
+
+**Appearance**
 - **Use system setting** (default) follows Windows' app mode (Settings → Personalisation → Colours) and switches live when you change it.
 - **Light** or **Dark** fixes the theme. The choice is saved in `%APPDATA%\MelodyDesk\theme.txt`.
 
 Dark mode covers the window and its title bar, the menus, the tray panel and the tray menu. The dark palette uses HeyMelody's own night colours; the window surfaces follow Windows 11. `--selftest` checks that text in both themes stays at WCAG AA contrast (4.5:1).
 
 **Updates** (also on the About page):
-- **Check for updates** asks GitHub for the newest release of this repository. MelodyDesk only checks when you click it.
-- If that release is newer than the running copy, **Download and install** downloads its `MelodyDesk-Setup.exe` to your temp folder and opens it.
+- **Check for updates automatically** (on by default) asks GitHub for the newest release of this repository a minute after MelodyDesk starts and then once a day. When a newer version is out, a notification says so; click it to open the About page. If GitHub can't be reached, it tries again an hour later without telling you. The choice is saved in `%APPDATA%\MelodyDesk\updates.txt`.
+- **Check for updates** checks right away.
+- If the newest release is newer than the running copy, **Download and install** downloads its `MelodyDesk-Setup.exe` to your temp folder and opens it.
 - Click **Update** in Setup. It closes MelodyDesk, replaces it and starts the new version.
 
 **What's shown for each model**

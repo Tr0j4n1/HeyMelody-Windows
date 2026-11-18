@@ -21,7 +21,6 @@ namespace MelodyDesk
     static class Setup
     {
         const string Name = "MelodyDesk";
-        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run"; // the same entry as the tray menu's Start with Windows
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\MelodyDesk";
         static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", Name);
         static readonly string AppExe = Path.Combine(Dir, "MelodyDesk.exe");
@@ -85,7 +84,7 @@ namespace MelodyDesk
             var card = new Border { Style = (Style)window.FindResource("Card"), Margin = new Thickness(0, 20, 0, 0) };
             var rows = new StackPanel();
             rows.Children.Add(ToggleRow(window, "Start with Windows", "Opens in the notification area when you sign in, so the earbuds connect without you opening it.",
-                installed == null || RunEntry() != null, out startup));
+                installed == null || Startup.Enabled, out startup));
             rows.Children.Add(new Border { Height = 1, Margin = new Thickness(16, 0, 16, 0), Background = (System.Windows.Media.Brush)window.FindResource("Divider") });
             rows.Children.Add(ToggleRow(window, "Desktop shortcut", null, File.Exists(DesktopLink), out desktop));
             card.Child = rows;
@@ -170,12 +169,6 @@ namespace MelodyDesk
                 "Uninstall MelodyDesk", MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK;
         }
 
-        static string RunEntry()
-        {
-            using (var run = Registry.CurrentUser.OpenSubKey(RunKey))
-                return run != null ? run.GetValue(Name) as string : null;
-        }
-
         static void Install(bool startup, bool desktopShortcut)
         {
             CloseRunningApp();
@@ -188,11 +181,7 @@ namespace MelodyDesk
 
             Shortcut(StartMenuLink);
             if (desktopShortcut) Shortcut(DesktopLink); else File.Delete(DesktopLink);
-            using (var run = Registry.CurrentUser.CreateSubKey(RunKey))
-            {
-                if (startup) run.SetValue(Name, "\"" + AppExe + "\" --tray");
-                else run.DeleteValue(Name, false);
-            }
+            Startup.Set(startup, AppExe);
             using (var key = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
                 key.SetValue("DisplayName", Name);
@@ -210,8 +199,7 @@ namespace MelodyDesk
         static void Uninstall()
         {
             CloseRunningApp();
-            using (var run = Registry.CurrentUser.OpenSubKey(RunKey, true))
-                if (run != null) run.DeleteValue(Name, false);
+            Startup.Set(false, AppExe);
             File.Delete(StartMenuLink);
             File.Delete(DesktopLink);
             Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);

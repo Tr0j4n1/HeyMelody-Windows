@@ -12,6 +12,18 @@ namespace MelodyDesk
         const string Releases = "https://github.com/Tr0j4n1/HeyMelody-Windows/releases/latest";
         public static readonly Version Current = Assembly.GetExecutingAssembly().GetName().Version;
         static readonly string Agent = "MelodyDesk/" + Current.ToString(2);
+        static readonly string SettingFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MelodyDesk", "updates.txt");
+
+        // Check on its own a minute after starting and then daily; on unless turned off on the About page.
+        public static bool Automatic
+        {
+            get { try { return File.ReadAllText(SettingFile).Trim() != "Off"; } catch { return true; } }
+            set
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingFile));
+                File.WriteAllText(SettingFile, value ? "On" : "Off");
+            }
+        }
 
         // GitHub redirects /releases/latest to /releases/tag/v<version>, so the redirect alone names the newest version.
         public static Version Latest()

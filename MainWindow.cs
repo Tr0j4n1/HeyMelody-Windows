@@ -110,6 +110,8 @@ namespace MelodyDesk
         readonly DispatcherTimer batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         readonly DispatcherTimer reconnectTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
         readonly DispatcherTimer bassTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        readonly DispatcherTimer updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; // first automatic check
+        readonly List<RadioButton> navItems = new List<RadioButton>();
         readonly StringBuilder log = new StringBuilder();
         TextBox logBox;
         bool exiting, trayHintShown, userDisconnected;
@@ -211,6 +213,12 @@ namespace MelodyDesk
             taskbarLabel.Clicked += () => Ui(ToggleFlyout);
             tapFix.Log += line => Ui(() => Log(line));
             tapFix.Start();
+            updateTimer.Tick += (s, e) =>
+            {
+                updateTimer.Interval = TimeSpan.FromDays(1); // the check sets an hour instead when GitHub can't be reached
+                if (Update.Automatic) CheckForUpdates(true);
+            };
+            updateTimer.Start();
 
             LoadDevices();
             Render();
@@ -620,7 +628,7 @@ namespace MelodyDesk
             string name = device != null ? device.Name : "Earbuds";
             deviceName.Text = name;
             flyoutName.Text = name;
-            window.Title = name + " — MelodyDesk";
+            window.Title = name + " - MelodyDesk";
             RenderHero();
             RenderStatus(flyoutStatus);
             cards.IsEnabled = flyoutNoise.IsEnabled = connected;
@@ -1002,6 +1010,7 @@ namespace MelodyDesk
                 content.Children.Add(new TextBlock { Text = items[i].Item1, Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
                 var item = new RadioButton { Content = content, GroupName = "nav", Style = (Style)window.FindResource("NavItem"), IsChecked = i == 0 };
                 AutomationProperties.SetName(item, items[i].Item1);
+                navItems.Add(item);
                 item.Checked += (s, e) =>
                 {
                     CloseSubPage();
@@ -1109,14 +1118,20 @@ namespace MelodyDesk
 
         // The About page's Updates row, rebuilt from these as a check or download progresses.
         string updateStatus;
-        Version updateFound;
+        Version updateFound, updateNotified;
         bool updateBusy;
 
-        void CheckForUpdates()
+        // automatic: the daily check. It stays quiet when GitHub can't be reached (and tries again in an hour), and
+        // announces a new version with a notification, once per version.
+        void CheckForUpdates(bool automatic)
         {
+            if (updateBusy) return;
             updateBusy = true;
-            updateStatus = "Checking…";
-            BuildAbout();
+            if (!automatic)
+            {
+                updateStatus = "Checking…";
+                BuildAbout();
+            }
             new Thread(() =>
             {
                 Version found = null;
@@ -1125,7 +1140,8 @@ namespace MelodyDesk
                 {
                     var latest = Update.Latest();
                     if (Update.IsNewer(latest)) found = latest;
-                    status = found != null ? "MelodyDesk " + latest + " is available" : "You have the latest version";
+                    status = found != null ? "MelodyDesk " + latest + " is available"
+                        : "You have the latest version. Last checked at " + DateTime.Now.ToString("t") + ".";
                 }
                 catch (Exception e)
                 {
@@ -1134,13 +1150,48 @@ namespace MelodyDesk
                 }
                 Ui(() =>
                 {
-                    if (error != null) Log("Update check failed: " + error);
                     updateBusy = false;
+                    if (error != null) Log("Update check failed: " + error);
+                    if (automatic) updateTimer.Interval = error != null ? TimeSpan.FromHours(1) : TimeSpan.FromDays(1);
+                    if (automatic && error != null) return;
                     updateFound = found;
                     updateStatus = status;
                     BuildAbout();
+                    if (automatic && found != null && found != updateNotified)
+                    {
+                        updateNotified = found;
+                        tray.Balloon("MelodyDesk " + found + " is available", "Click here to download and install it.", ShowUpdate);
+                    }
                 });
             }) { IsBackground = true }.Start();
+        }
+
+        // Opens the About page, where the Updates row offers Download and install.
+        void ShowUpdate()
+        {
+            ShowMain();
+            navItems[navItems.Count - 1].IsChecked = true;
+        }
+
+        // A switch for one of MelodyDesk's own settings.
+        UIElement SettingRow(string title, string summary, Func<bool> get, Action<bool> set)
+        {
+            var toggle = new CheckBox { Style = (Style)window.FindResource("Switch"), IsChecked = get() };
+            UIElement row = null;
+            row = Row(title, Summary(summary), toggle, () =>
+            {
+                try { set(!get()); }
+                catch (Exception e) { MessageBox.Show(window, "Could not change this setting.\n" + e.Message, "MelodyDesk"); }
+                toggle.IsChecked = get();
+                AutomationProperties.SetItemStatus(row, get() ? "On" : "Off");
+            });
+            AutomationProperties.SetItemStatus(row, get() ? "On" : "Off");
+            return row;
+        }
+
+        static void SetStartup(bool on)
+        {
+            Startup.Set(on, Assembly.GetEntryAssembly().Location);
         }
 
         void InstallUpdate()
@@ -1194,13 +1245,21 @@ namespace MelodyDesk
                     ApplyTheme();
                 }));
             }
+            AddSection(aboutContent, "General", Card(new[] {
+                SettingRow("Start with Windows", "Opens in the notification area when you sign in, so the earbuds connect without you opening it",
+                    () => Startup.Enabled, SetStartup),
+                SettingRow("Battery on taskbar", "Shows the earbuds' battery levels next to the notification area",
+                    () => TaskbarLabel.Enabled, on => { TaskbarLabel.Enabled = on; Render(); }),
+            }));
             AddSection(aboutContent, "Appearance", Card(themes));
             var updateButton = new Button { Content = updateFound != null ? "Download and install" : "Check for updates",
                 Style = (Style)window.FindResource(updateFound != null ? "AccentButton" : "PlainButton"), IsEnabled = !updateBusy };
-            updateButton.Click += (s, e) => { if (updateFound != null) InstallUpdate(); else CheckForUpdates(); };
+            updateButton.Click += (s, e) => { if (updateFound != null) InstallUpdate(); else CheckForUpdates(false); };
             AddSection(aboutContent, "About MelodyDesk", Card(new[] {
                 Row("App version", null, new TextBlock { Text = Update.Current.ToString(2), Foreground = labelSecondary }, null),
                 Row("Updates", Summary(updateStatus), updateButton, null),
+                SettingRow("Check for updates automatically", "Checks once a day and shows a notification when a new version is out",
+                    () => Update.Automatic, on => { Update.Automatic = on; if (on) CheckForUpdates(true); }),
                 Row("Protocol", Summary("Reverse-engineered from HeyMelody 116.9.0 for Android"), null, null),
                 Row("Supported devices", Summary("OPPO, OnePlus and realme earbuds that use the HeyMelody app"), null, null),
             }));
@@ -1420,15 +1479,16 @@ namespace MelodyDesk
                 connection.Click += (s, e) => { if (connected) Disconnect(); else Connect(false); };
                 menu.Items.Add(connection);
             }
-            var autostart = new Forms.ToolStripMenuItem("Start with Windows") { Checked = Tray.StartsWithWindows };
+            var autostart = new Forms.ToolStripMenuItem("Start with Windows") { Checked = Startup.Enabled };
             autostart.Click += (s, e) =>
             {
-                try { Tray.StartsWithWindows = !Tray.StartsWithWindows; }
+                try { SetStartup(!Startup.Enabled); }
                 catch (Exception ex) { MessageBox.Show("Could not change the start-up setting.\n" + ex.Message, "MelodyDesk"); }
+                BuildAbout();
             };
             menu.Items.Add(autostart);
             var onTaskbar = new Forms.ToolStripMenuItem("Battery on taskbar") { Checked = TaskbarLabel.Enabled };
-            onTaskbar.Click += (s, e) => { TaskbarLabel.Enabled = !TaskbarLabel.Enabled; Render(); };
+            onTaskbar.Click += (s, e) => { TaskbarLabel.Enabled = !TaskbarLabel.Enabled; Render(); BuildAbout(); };
             menu.Items.Add(onTaskbar);
             menu.Items.Add(new Forms.ToolStripSeparator());
             var exit = new Forms.ToolStripMenuItem("Exit");
@@ -1452,7 +1512,7 @@ namespace MelodyDesk
             logBox = new TextBox { IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Text = log.ToString(), BorderThickness = new Thickness(0), Padding = new Thickness(8) };
             logBox.SetResourceReference(Control.BackgroundProperty, "CardBg");
             logBox.SetResourceReference(Control.ForegroundProperty, "LabelPrimary");
-            var w = new Window { Title = "Traffic log — MelodyDesk", Width = 640, Height = 420, Content = logBox, Icon = appIcon };
+            var w = new Window { Title = "Traffic log - MelodyDesk", Width = 640, Height = 420, Content = logBox, Icon = appIcon };
             w.SourceInitialized += (s, e) => Theme.ApplyTitleBar(w);
             w.Closed += (s, e) => logBox = null;
             w.Show();

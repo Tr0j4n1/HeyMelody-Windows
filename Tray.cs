@@ -2,21 +2,19 @@ using System;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
-using Microsoft.Win32;
 
 namespace MelodyDesk
 {
     // Notification-area icon. Left click raises Clicked; the right-click menu is rebuilt by MenuOpening every time it opens.
     sealed class Tray : IDisposable
     {
-        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        const string RunValue = "MelodyDesk";
         // Two earbuds (round head + stem) on a 16x16 grid; used for the Device navigation item and Find my earbuds.
         public const string Glyph = "M4.5,1.5 A3.5,3.5 0 1 0 4.5,8.5 A3.5,3.5 0 1 0 4.5,1.5 Z M5.4,6.8 H7.4 V13.8 A1,1 0 0 1 5.4,13.8 Z "
                                   + "M11.5,1.5 A3.5,3.5 0 1 1 11.5,8.5 A3.5,3.5 0 1 1 11.5,1.5 Z M8.6,6.8 H10.6 V13.8 A1,1 0 0 1 8.6,13.8 Z";
 
         readonly NotifyIcon icon = new NotifyIcon();
         readonly ContextMenuStrip menu = new ContextMenuStrip();
+        Action balloonClicked;
 
         public event Action Clicked;
         public event Action<ContextMenuStrip> MenuOpening;
@@ -36,6 +34,8 @@ namespace MelodyDesk
             };
             icon.ContextMenuStrip = menu;
             icon.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left && Clicked != null) Clicked(); };
+            icon.BalloonTipClicked += (s, e) => { var clicked = balloonClicked; balloonClicked = null; if (clicked != null) clicked(); };
+            icon.BalloonTipClosed += (s, e) => balloonClicked = null;
             icon.Visible = true;
         }
 
@@ -91,8 +91,10 @@ namespace MelodyDesk
             }
         }
 
-        public void Balloon(string title, string text)
+        // A Windows notification from the tray icon; clicked runs if it's clicked while it shows.
+        public void Balloon(string title, string text, Action clicked = null)
         {
+            balloonClicked = clicked;
             icon.ShowBalloonTip(5000, title, text, ToolTipIcon.None);
         }
 
@@ -103,22 +105,5 @@ namespace MelodyDesk
             menu.Dispose();
         }
 
-        // Opt-in autostart: HKCU Run entry that launches straight into the tray.
-        public static bool StartsWithWindows
-        {
-            get
-            {
-                using (var key = Registry.CurrentUser.OpenSubKey(RunKey))
-                    return key != null && key.GetValue(RunValue) != null;
-            }
-            set
-            {
-                using (var key = Registry.CurrentUser.CreateSubKey(RunKey))
-                {
-                    if (value) key.SetValue(RunValue, "\"" + Assembly.GetEntryAssembly().Location + "\" --tray");
-                    else key.DeleteValue(RunValue, false);
-                }
-            }
-        }
     }
 }
